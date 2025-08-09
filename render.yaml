@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: smartflow-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    rootDir: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        value: smartflow-jwt-secret-key-2024-production
+      - key: PORT
+        value: 8080
