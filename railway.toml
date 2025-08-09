@@ -9,3 +9,8 @@ restartPolicyType = "on_failure"
 
 [[services]]
 name = "smartflow-backend"
+
+[[volumes]]
+name = "data"
+mountPath = "/data"
+size = "1GB"
