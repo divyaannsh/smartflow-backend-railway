@@ -2,12 +2,12 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
-// Prefer explicit DB file path (e.g., Railway volume) else fall back
-// In production without DB_FILE, use /tmp for serverless; in dev use local file
+// Database path configuration
+// Railway free tier can only write to /app directory
 const dbPath = process.env.DB_FILE
   ? process.env.DB_FILE
   : (process.env.NODE_ENV === 'production'
-      ? '/tmp/project_manager.db'
+      ? path.join(__dirname, 'project_manager.db')
       : path.join(__dirname, 'project_manager.db'));
 
 let db;
