@@ -63,6 +63,50 @@ router.get('/:id/members', async (req, res) => {
 });
 
 
+// Create new project
+router.post('/', [
+  body('name').notEmpty().withMessage('Project name is required'),
+  body('description').optional(),
+  body('status').isIn(['active', 'on_hold', 'completed', 'cancelled']).withMessage('Invalid status'),
+  body('priority').isIn(['low', 'medium', 'high', 'critical']).withMessage('Invalid priority'),
+  body('deadline').optional().isISO8601().withMessage('Invalid deadline format')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { name, description, status, priority, deadline } = req.body;
+    const created_by = req.user ? req.user.id : 1; // Default to admin if no auth
+
+    const db = getDatabase();
+    const insert = `
+      INSERT INTO projects (name, description, status, priority, deadline, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `;
+
+    db.run(insert, [name, description || '', status || 'active', priority || 'medium', deadline || null, created_by], function(err) {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      // Get the created project
+      db.get('SELECT * FROM projects WHERE id = ?', [this.lastID], (err, project) => {
+        if (err) {
+          console.error('Database error:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        res.status(201).json(project);
+      });
+    });
+  } catch (error) {
+    console.error('Error creating project:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get all projects
 router.get('/', async (req, res) => {
   try {
@@ -211,6 +255,38 @@ router.put('/:id', [
     });
   } catch (error) {
     console.error('Error updating project:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete all projects (Admin only - use with caution!)
+router.delete('/all', async (req, res) => {
+  try {
+    const db = getDatabase();
+    
+    // Delete all project members first
+    db.run('DELETE FROM project_members', [], function(err) {
+      if (err) {
+        console.error('Database error deleting project members:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      // Delete all projects
+      db.run('DELETE FROM projects', [], function(err) {
+        if (err) {
+          console.error('Database error deleting projects:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        
+        console.log(`Deleted ${this.changes} projects and all project members`);
+        res.json({ 
+          message: `Successfully deleted ${this.changes} projects and all project members`,
+          deleted_projects: this.changes
+        });
+      });
+    });
+  } catch (error) {
+    console.error('Error deleting all projects:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
