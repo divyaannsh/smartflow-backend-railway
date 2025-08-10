@@ -2,6 +2,9 @@ const path = require('path');
 const express = require('express');
 const app = require('./app');
 
+// Force Railway redeploy - v2
+console.log('🚀 SmartFlow Backend Starting - Railway Deployment v2');
+
 // Initialize database in background (non-blocking)
 console.log('Initializing database in background...');
 const { initializeDatabase } = require('./database/init');
