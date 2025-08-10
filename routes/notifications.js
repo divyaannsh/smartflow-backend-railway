@@ -540,19 +540,42 @@ router.delete('/:id', verifyToken, (req, res) => {
 });
 
 // SSE stream
-router.get('/stream', verifyToken, (req, res) => {
+router.get('/stream', async (req, res) => {
+  // Get token from query parameter since EventSource doesn't support headers
+  const token = req.query.token;
+  
+  if (!token) {
+    console.log('SSE Stream: No token provided');
+    return res.status(401).json({ error: 'Access token required' });
+  }
+  
+  try {
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    console.log('SSE Stream: Token verified for user:', decoded.id);
+  } catch (error) {
+    console.log('SSE Stream: Token verification failed:', error.message);
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
   res.flushHeaders();
 
   const userId = req.user.id;
   if (!sseClients.has(userId)) sseClients.set(userId, new Set());
   const clientSet = sseClients.get(userId);
   clientSet.add(res);
+  
+  console.log('SSE Stream: Client connected for user:', userId);
 
   req.on('close', () => {
     clientSet.delete(res);
     if (clientSet.size === 0) sseClients.delete(userId);
+    console.log('SSE Stream: Client disconnected for user:', userId);
   });
 });
