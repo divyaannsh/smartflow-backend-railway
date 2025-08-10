@@ -13,15 +13,20 @@ initializeDatabase()
     console.error('Database initialization failed (non-critical):', error);
   });
 
-// Serve static files from the React app in production
+// Serve static files from the React app in production (only if build directory exists)
 if (process.env.NODE_ENV === 'production') {
-  console.log('Serving static files from client/build');
-  app.use(express.static(path.join(__dirname, '../client/build')));
+  const buildPath = path.join(__dirname, '../client/build');
+  if (require('fs').existsSync(buildPath)) {
+    console.log('Serving static files from client/build');
+    app.use(express.static(buildPath));
 
-  // Handle React routing, return all requests to React app
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
-  });
+    // Handle React routing, return all requests to React app
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(buildPath, 'index.html'));
+    });
+  } else {
+    console.log('No client/build directory found, running as API-only backend');
+  }
 }
 
 // Get port from environment variable or default to 5001 (aligns with frontend proxy)
